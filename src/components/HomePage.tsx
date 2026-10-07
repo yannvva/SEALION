@@ -19,13 +19,14 @@ import Cursor from "./Cursor";
 import Preloader from "./Preloader";
 import Magnetic from "./Magnetic";
 import Decode from "./Decode";
+import dynamic from "next/dynamic";
 import DrawSection from "./DrawSection";
 import Playground from "./Playground";
-import Catalog from "./catalog/Catalog";
 import CardStack from "./CardStack";
 import ClipReveal from "./ClipReveal";
 import MorphSection from "./MorphSection";
 import FlipDemo from "./FlipDemo";
+
 import {
   EditorialSpread,
   MediaStrip,
@@ -33,6 +34,13 @@ import {
   VoicesSection,
   OffersSection,
 } from "./Showcase";
+
+// The catalog pulls ~19k lines of demo code plus the Motion runtime — split it
+// out of the initial chunk so the hero/preloader parse and paint first.
+const Catalog = dynamic(() => import("./catalog/Catalog"), {
+  ssr: false,
+  loading: () => <div className="min-h-screen" />,
+});
 
 const NAV = [
   { label: "CATALOGUE", href: "#catalog" },

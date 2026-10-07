@@ -2,6 +2,7 @@
 
 import {
   Component,
+  memo,
   useDeferredValue,
   useEffect,
   useRef,
@@ -14,13 +15,31 @@ import { gsap, useGSAP, ScrollSmoother, ScrollTrigger } from "@/lib/gsap";
 import { EFFECTS, CATS, type Effect, type EffectCat } from "@/effects/registry";
 import Decode from "@/components/Decode";
 
-// Pauses every GSAP animation targeting elements inside the frame while the
-// card is off-screen — 45 looping demos would otherwise burn RAFs constantly.
+// id → position in EFFECTS, built once — indexOf inside the render loop was O(n²)
+const EFFECT_INDEX = new Map(EFFECTS.map((e, i) => [e.id, i]));
+
+// Lazy-mounts the demo only when the card approaches the viewport, then pauses
+// every GSAP animation targeting it while off-screen — 337 demos mounting at
+// once (SplitText, ScrollTriggers, Draggables) would otherwise stall the load.
 function DemoFrame({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
+  const [live, setLive] = useState(false);
   useEffect(() => {
     const el = ref.current!;
-    const io = new IntersectionObserver(
+    const mountIO = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          const r = el.getBoundingClientRect();
+          el.dataset.paused =
+            r.top > window.innerHeight + 80 || r.bottom < -80 ? "1" : "";
+          setLive(true);
+          mountIO.disconnect();
+        }
+      },
+      { rootMargin: "600px" }
+    );
+    mountIO.observe(el);
+    const pauseIO = new IntersectionObserver(
       ([entry]) => {
         const paused = !entry.isIntersecting;
         el.dataset.paused = paused ? "1" : "";
@@ -42,12 +61,15 @@ function DemoFrame({ children }: { children: ReactNode }) {
       },
       { rootMargin: "80px" }
     );
-    io.observe(el);
-    return () => io.disconnect();
+    pauseIO.observe(el);
+    return () => {
+      mountIO.disconnect();
+      pauseIO.disconnect();
+    };
   }, []);
   return (
     <div ref={ref} className="h-full w-full">
-      {children}
+      {live ? children : null}
     </div>
   );
 }
@@ -76,7 +98,7 @@ class DemoBoundary extends Component<
   }
 }
 
-function EffectCard({
+const EffectCard = memo(function EffectCard({
   effect,
   index,
   selected,
@@ -175,7 +197,12 @@ function EffectCard({
       </span>
     </article>
   );
-}
+}, (prev, next) =>
+  prev.effect.id === next.effect.id &&
+  prev.index === next.index &&
+  prev.selected === next.selected &&
+  prev.fav === next.fav
+);
 
 const CODE_TOKEN =
   /(\/\/[^\n]*)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`)|\b(const|let|var|new|return|import|from|function|if|else|for|of|in|true|false|type)\b|\b(\d+(?:\.\d+)?)\b|(\.\w+)(?=\()/g;
@@ -1251,7 +1278,7 @@ export default function Catalog() {
           <EffectCard
             key={e.id}
             effect={e}
-            index={EFFECTS.indexOf(e)}
+            index={EFFECT_INDEX.get(e.id) ?? 0}
             selected={selected.has(e.id)}
             fav={favs.has(e.id)}
             onSelect={() => toggle(e.id)}
@@ -1285,8 +1312,8 @@ export default function Catalog() {
         createPortal(
           <EffectModal
             effect={openEffect}
-            index={EFFECTS.indexOf(openEffect)}
-            pos={openIdx >= 0 ? openIdx : EFFECTS.indexOf(openEffect)}
+            index={EFFECT_INDEX.get(openEffect.id) ?? 0}
+            pos={openIdx >= 0 ? openIdx : (EFFECT_INDEX.get(openEffect.id) ?? 0)}
             total={openIdx >= 0 ? visible.length : EFFECTS.length}
             selected={selected.has(openEffect.id)}
             fav={favs.has(openEffect.id)}

@@ -19,8 +19,6 @@ import { TextPlugin } from "gsap/TextPlugin";
 import { CustomBounce } from "gsap/CustomBounce";
 import { CustomWiggle } from "gsap/CustomWiggle";
 import { EasePack } from "gsap/EasePack";
-import { GSDevTools } from "gsap/GSDevTools";
-import { MotionPathHelper } from "gsap/MotionPathHelper";
 
 gsap.registerPlugin(
   useGSAP,
@@ -29,7 +27,6 @@ gsap.registerPlugin(
   ScrambleTextPlugin,
   DrawSVGPlugin,
   MotionPathPlugin,
-  MotionPathHelper,
   Physics2DPlugin,
   PhysicsPropsPlugin,
   Draggable,
@@ -43,8 +40,7 @@ gsap.registerPlugin(
   TextPlugin,
   CustomBounce,
   CustomWiggle,
-  EasePack,
-  GSDevTools
+  EasePack
 );
 
 export {
@@ -60,6 +56,4 @@ export {
   CustomEase,
   CustomBounce,
   CustomWiggle,
-  GSDevTools,
-  MotionPathHelper,
 };
